@@ -22,6 +22,8 @@ app.use('/api/analytics', analyticsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
+app.get("/",(req,res)=>res.json({message:"Hey Nayab! The bugs are on strike today, so everything should work perfectly.",status:"ok",deployement:"success",env:process.env.NODE_ENV}))
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
