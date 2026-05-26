@@ -43,10 +43,10 @@ export default function WeeklyPage() {
   const dates = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day'));
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
 
       {/* Page header */}
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Weekly</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -84,20 +84,14 @@ export default function WeeklyPage() {
         <>
           {/* ── Grid: habits = rows, days = columns ── */}
           <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full border-collapse text-sm">
-
-              {/* Column widths: habit label col + 7 day cols + total col */}
-              <colgroup>
-                <col className="w-40" />
-                {dates.map((_, i) => <col key={i} />)}
-                <col className="w-14" />
-              </colgroup>
+            <table className="w-full border-collapse">
 
               <thead>
                 <tr className="border-b border-border bg-card/60">
-                  {/* Top-left corner */}
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
-                    Habit
+                  {/* Habit column — icon-only on mobile, icon+name on desktop */}
+                  <th className="py-3 text-left text-xs font-medium text-muted-foreground"
+                      style={{ width: 44, paddingLeft: 10 }}>
+                    <span className="hidden sm:inline">Habit</span>
                   </th>
 
                   {/* Day columns */}
@@ -108,13 +102,14 @@ export default function WeeklyPage() {
                       <th
                         key={i}
                         className="py-3 text-center"
-                        style={isToday ? { background: 'hsl(0 0% 8%)' } : {}}
+                        style={{ width: 36, ...(isToday ? { background: 'hsl(0 0% 8%)' } : {}) }}
                       >
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className={`text-xs font-medium ${isToday ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {DAY_LABELS[i]}
+                          <span className={`text-[10px] font-medium ${isToday ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {DAY_LABELS[i].slice(0, 1)}
+                            <span className="hidden sm:inline">{DAY_LABELS[i].slice(1)}</span>
                           </span>
-                          <span className={`text-[11px] ${isToday ? 'text-muted-foreground' : 'text-muted-foreground/40'}`}>
+                          <span className={`text-[10px] ${isToday ? 'text-muted-foreground' : 'text-muted-foreground/40'}`}>
                             {d.format('D')}
                           </span>
                         </div>
@@ -123,14 +118,14 @@ export default function WeeklyPage() {
                   })}
 
                   {/* Total column */}
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">
+                  <th className="py-3 text-center text-[10px] font-medium text-muted-foreground" style={{ width: 28 }}>
                     /7
                   </th>
                 </tr>
               </thead>
 
               <tbody>
-                {HABITS.map((habit, hi) => {
+                {HABITS.map((habit) => {
                   const weekTotal = dates.filter(d => {
                     const log = logMap[d.format('YYYY-MM-DD')];
                     return log?.habits?.[habit.id];
@@ -139,11 +134,11 @@ export default function WeeklyPage() {
                   return (
                     <tr
                       key={habit.id}
-                      className={`border-b border-border/40 last:border-0 transition-colors hover:bg-accent/10 ${hi % 2 === 0 ? '' : ''}`}
+                      className="border-b border-border/40 last:border-0 transition-colors hover:bg-accent/10"
                     >
-                      {/* Habit label */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
+                      {/* Habit label: icon only on mobile, icon+name on sm+ */}
+                      <td className="py-2.5" style={{ paddingLeft: 8, paddingRight: 4 }}>
+                        <div className="flex items-center gap-2">
                           <div
                             className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
                             style={{ background: habit.color + '18' }}
@@ -155,7 +150,7 @@ export default function WeeklyPage() {
                               style={{ color: habit.color }}
                             />
                           </div>
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          <span className="hidden sm:inline text-sm text-muted-foreground whitespace-nowrap">
                             {habit.name}
                           </span>
                         </div>
@@ -172,7 +167,7 @@ export default function WeeklyPage() {
                         return (
                           <td
                             key={di}
-                            className="py-3 text-center"
+                            className="py-2.5 text-center"
                             style={isToday ? { background: 'hsl(0 0% 6%)' } : {}}
                           >
                             {isFuture ? (
@@ -193,9 +188,9 @@ export default function WeeklyPage() {
                       })}
 
                       {/* Weekly total */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="py-2.5 text-center">
                         <span
-                          className="text-xs font-medium tabular-nums"
+                          className="text-[11px] font-medium tabular-nums"
                           style={{ color: weekTotal >= 5 ? habit.color : 'hsl(0 0% 28%)' }}
                         >
                           {weekTotal}
@@ -209,7 +204,10 @@ export default function WeeklyPage() {
               {/* Footer: daily totals */}
               <tfoot>
                 <tr className="border-t border-border bg-card/40">
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground/40">Daily total</td>
+                  <td className="py-2 text-[10px] text-muted-foreground/40" style={{ paddingLeft: 10 }}>
+                    <span className="hidden sm:inline">Daily total</span>
+                    <span className="sm:hidden">Tot</span>
+                  </td>
                   {dates.map((d, i) => {
                     const dateStr = d.format('YYYY-MM-DD');
                     const isFuture = dateStr > today;
@@ -219,14 +217,14 @@ export default function WeeklyPage() {
                     return (
                       <td
                         key={i}
-                        className="py-2.5 text-center"
+                        className="py-2 text-center"
                         style={isToday ? { background: 'hsl(0 0% 6%)' } : {}}
                       >
                         {isFuture ? (
-                          <span className="text-xs text-muted-foreground/15">—</span>
+                          <span className="text-[10px] text-muted-foreground/15">—</span>
                         ) : (
                           <span
-                            className="text-xs font-semibold tabular-nums"
+                            className="text-[10px] font-semibold tabular-nums"
                             style={{
                               color: count >= 7 ? '#10B981' : count >= 4 ? '#F59E0B' : 'hsl(0 0% 30%)',
                             }}
@@ -244,7 +242,7 @@ export default function WeeklyPage() {
           </div>
 
           {/* Bar chart */}
-          <div className="mt-10">
+          <div className="mt-8 sm:mt-10">
             <Separator className="mb-6" />
             <p className="text-xs text-muted-foreground mb-5">Daily completions</p>
             <WeeklyBarChart logs={logs} weekStart={weekStart} />
