@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { api, YearMonth } from '@/lib/api';
-import { HABITS, HABIT_IDS } from '@/lib/habits';
+import { HABITS } from '@/lib/habits';
 import YearlyLineChart from '@/components/Charts/YearlyLineChart';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
