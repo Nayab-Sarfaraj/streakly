@@ -134,7 +134,7 @@ router.get('/year', async (req, res) => {
         logs.forEach(l => HABIT_IDS.forEach(id => { if (l.habits[id]) habitCounts[id]++; }));
         const bestHabit = Object.entries(habitCounts).sort((a, b) => b[1] - a[1])[0][0];
 
-        return { month: monthNames[i], completedTotal, scoreAvg: parseFloat(scoreAvg.toFixed(2)), bestHabit };
+        return { month: monthNames[i], completedTotal, scoreAvg: parseFloat(scoreAvg.toFixed(2)), bestHabit, habitCounts };
       })
     );
 

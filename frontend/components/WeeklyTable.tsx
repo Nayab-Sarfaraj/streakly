@@ -22,23 +22,23 @@ export default function WeeklyTable({ logs, weekStart }: WeeklyTableProps) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm border-collapse" style={{ minWidth: 340 }}>
         <thead>
           <tr className="border-b border-border">
-            <th className="text-left px-4 py-3 text-xs text-muted-foreground font-medium w-36">Habit</th>
+            <th className="text-left px-2 py-3 text-xs text-muted-foreground font-medium" style={{ width: 90 }}>Habit</th>
             {dates.map((d, i) => {
               const dateStr = d.format('YYYY-MM-DD');
               const isToday = dateStr === today;
               return (
-                <th key={i} className="px-3 py-3 text-center font-medium">
+                <th key={i} className="px-1 py-3 text-center font-medium" style={{ width: 32 }}>
                   <div className={`inline-flex flex-col items-center gap-0.5 ${isToday ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    <span className="text-[10px]">{DAY_LABELS[i]}</span>
-                    <span className={`text-xs ${isToday ? 'font-semibold' : 'font-normal'}`}>{d.format('D')}</span>
+                    <span className="text-[9px]">{DAY_LABELS[i]}</span>
+                    <span className={`text-[10px] ${isToday ? 'font-semibold' : 'font-normal'}`}>{d.format('D')}</span>
                   </div>
                 </th>
               );
             })}
-            <th className="px-3 py-3 text-center text-xs text-muted-foreground font-medium">Total</th>
+            <th className="px-1 py-3 text-center text-[10px] text-muted-foreground font-medium" style={{ width: 28 }}>/7</th>
           </tr>
         </thead>
         <tbody>
@@ -49,10 +49,10 @@ export default function WeeklyTable({ logs, weekStart }: WeeklyTableProps) {
             }).length;
             return (
               <tr key={habit.id} className="border-b border-border/40 hover:bg-accent/20 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <HabitIcon name={habit.icon} size={12} strokeWidth={1.75} style={{ color: habit.color }} />
-                    <span className="text-xs text-muted-foreground">{habit.name}</span>
+                <td className="px-2 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <HabitIcon name={habit.icon} size={11} strokeWidth={1.75} style={{ color: habit.color }} />
+                    <span className="text-[11px] text-muted-foreground truncate" style={{ maxWidth: 60 }}>{habit.name}</span>
                   </div>
                 </td>
                 {dates.map((d, i) => {
@@ -61,7 +61,7 @@ export default function WeeklyTable({ logs, weekStart }: WeeklyTableProps) {
                   const log = logMap[dateStr];
                   const done = log?.habits?.[habit.id];
                   return (
-                    <td key={i} className="px-3 py-3 text-center">
+                    <td key={i} className="px-1 py-2.5 text-center">
                       {isFuture ? (
                         <div className="w-2 h-2 rounded-full bg-border/20 mx-auto" />
                       ) : done ? (
@@ -72,9 +72,9 @@ export default function WeeklyTable({ logs, weekStart }: WeeklyTableProps) {
                     </td>
                   );
                 })}
-                <td className="px-3 py-3 text-center">
-                  <span className="text-xs font-medium tabular-nums" style={{ color: weekCount >= 5 ? habit.color : 'hsl(0 0% 30%)' }}>
-                    {weekCount}/7
+                <td className="px-1 py-2.5 text-center">
+                  <span className="text-[10px] font-medium tabular-nums" style={{ color: weekCount >= 5 ? habit.color : 'hsl(0 0% 30%)' }}>
+                    {weekCount}
                   </span>
                 </td>
               </tr>
@@ -83,18 +83,18 @@ export default function WeeklyTable({ logs, weekStart }: WeeklyTableProps) {
         </tbody>
         <tfoot>
           <tr className="border-t border-border bg-card/50">
-            <td className="px-4 py-2.5 text-xs text-muted-foreground/50">Daily total</td>
+            <td className="px-2 py-2 text-[10px] text-muted-foreground/50">Daily total</td>
             {dates.map((d, i) => {
               const dateStr = d.format('YYYY-MM-DD');
               const isFuture = dateStr > today;
               const log = logMap[dateStr];
               const count = log?.completedCount ?? 0;
               return (
-                <td key={i} className="px-3 py-2.5 text-center">
+                <td key={i} className="px-1 py-2 text-center">
                   {isFuture ? (
-                    <span className="text-xs text-muted-foreground/20">—</span>
+                    <span className="text-[10px] text-muted-foreground/20">—</span>
                   ) : (
-                    <span className={`text-xs font-medium tabular-nums ${count >= 7 ? 'text-emerald-400' : count >= 4 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                    <span className={`text-[10px] font-medium tabular-nums ${count >= 7 ? 'text-emerald-400' : count >= 4 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
                       {count}
                     </span>
                   )}

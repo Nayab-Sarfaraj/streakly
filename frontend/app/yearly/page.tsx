@@ -36,14 +36,10 @@ export default function YearlyPage() {
   const bestHabitId = Object.entries(bestHabitYear).sort((a, b) => b[1] - a[1])[0]?.[0];
   const bestHabitName = HABITS.find(h => h.id === bestHabitId)?.name ?? '—';
 
-  // Build per-habit per-month approximate counts
+  // Build per-habit per-month counts from real backend data
   const allMonthLogs: Record<string, Record<string, number>> = {};
   data.forEach(d => {
-    allMonthLogs[d.month] = {};
-    HABIT_IDS.forEach(id => {
-      const base = Math.round((d.completedTotal / 9) * d.scoreAvg);
-      allMonthLogs[d.month][id] = d.bestHabit === id ? Math.min(base + 3, 31) : base;
-    });
+    allMonthLogs[d.month] = d.habitCounts ?? {};
   });
 
   return (

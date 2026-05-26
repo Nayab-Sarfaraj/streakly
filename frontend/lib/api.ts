@@ -19,6 +19,7 @@ export interface YearMonth {
   completedTotal: number;
   scoreAvg: number;
   bestHabit: string | null;
+  habitCounts: Record<string, number>;
 }
 
 export interface AnalyticsSummary {
