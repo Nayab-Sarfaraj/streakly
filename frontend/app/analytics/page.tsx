@@ -1,42 +1,108 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
 import { api, AnalyticsSummary, HabitLog } from '@/lib/api';
 import { HABITS, HABIT_MAP } from '@/lib/habits';
 import TrendLineChart from '@/components/Charts/TrendLineChart';
+import WarningBanner, { Warning } from '@/components/WarningBanner';
+
+function buildWarnings(summary: AnalyticsSummary | null, monthLogs: HabitLog[]): Warning[] {
+  if (!summary) return [];
+  const warnings: Warning[] = [];
+
+  const logsWithData = monthLogs.filter(l => l.completedCount > 0);
+  const totalDays = logsWithData.length;
+
+  // Monthly avg below 50%
+  const avgPct = Math.round((summary.avgScoreThisMonth ?? 0) * 100);
+  if (totalDays >= 5 && avgPct < 50) {
+    warnings.push({
+      id: 'low-monthly-avg',
+      level: 'critical',
+      icon: 'trend',
+      title: `Monthly average is ${avgPct}% — below the 50% target`,
+      description: 'You need to complete at least 5 habits per day to stay on track.',
+    });
+  }
+
+  // Streak broken (was active before, now 0)
+  if (summary.longestStreak > 0 && summary.currentStreak === 0) {
+    warnings.push({
+      id: 'streak-broken',
+      level: 'critical',
+      icon: 'streak',
+      title: 'Your streak has been broken',
+      description: `Longest streak was ${summary.longestStreak} days. Start a new one today.`,
+    });
+  }
+
+  // Habits with under 40% completion rate this month
+  if (totalDays >= 5) {
+    const lowHabits = HABITS.filter(h => {
+      const count = summary.habitCounts[h.id] ?? 0;
+      const pct = totalDays > 0 ? (count / totalDays) * 100 : 0;
+      return pct < 40;
+    });
+    if (lowHabits.length >= 3) {
+      warnings.push({
+        id: 'many-low-habits',
+        level: 'warning',
+        icon: 'alert',
+        title: `${lowHabits.length} habits below 40% completion this month`,
+        description: lowHabits.map(h => h.name).join(', '),
+      });
+    } else if (lowHabits.length > 0) {
+      lowHabits.forEach(h => {
+        const count = summary.habitCounts[h.id] ?? 0;
+        const pct = totalDays > 0 ? Math.round((count / totalDays) * 100) : 0;
+        warnings.push({
+          id: `low-habit-${h.id}`,
+          level: 'warning',
+          icon: 'trend',
+          title: `${h.name} is at ${pct}% this month`,
+          description: `Done ${count} out of ${totalDays} logged days.`,
+        });
+      });
+    }
+  }
+
+  // More than 5 days this month with zero completions (logged but empty)
+  const zeroDays = monthLogs.filter(l => l.completedCount === 0).length;
+  if (zeroDays >= 5) {
+    warnings.push({
+      id: 'many-zero-days',
+      level: 'warning',
+      icon: 'x',
+      title: `${zeroDays} days this month with zero habits logged`,
+      description: 'Consistency matters more than perfect days.',
+    });
+  }
+
+  return warnings;
+}
 
 export default function AnalyticsPage() {
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [monthLogs, setMonthLogs] = useState<HabitLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: summary, isLoading: loadingSummary } = useQuery({
+    queryKey: ['analytics-summary'],
+    queryFn: () => api.getSummary(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
-  const fetchData = useCallback(() => {
-    const now = dayjs();
-    Promise.all([
-      api.getSummary(),
-      api.getMonth(now.year(), now.month() + 1),
-    ]).then(([s, logs]) => {
-      setSummary(s);
-      setMonthLogs(logs);
-    }).finally(() => setLoading(false));
-  }, []);
+  const now = dayjs();
+  const { data: monthLogs = [], isLoading: loadingLogs } = useQuery({
+    queryKey: ['month', now.year(), now.month() + 1],
+    queryFn: () => api.getMonth(now.year(), now.month() + 1),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
+  const loading = loadingSummary || loadingLogs;
   const logsWithData = monthLogs.filter(l => l.completedCount > 0);
   const totalDaysThisMonth = logsWithData.length;
 
-  const consistencyData = HABITS.map(habit => {
-    const done = logsWithData.filter(l => l.habits?.[habit.id]).length;
-    const missed = totalDaysThisMonth - done;
-    const pct = totalDaysThisMonth > 0 ? Math.round((done / totalDaysThisMonth) * 100) : 0;
-    return { habit, done, missed, pct };
-  }).sort((a, b) => b.pct - a.pct);
+  const warnings = buildWarnings(summary ?? null, monthLogs);
 
   if (loading) {
     return (
@@ -56,9 +122,16 @@ export default function AnalyticsPage() {
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontSize: 22, fontWeight: 600, color: '#fff', letterSpacing: '-0.02em' }}>Analytics</div>
         <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>
-          {dayjs().format('MMMM YYYY')}
+          {now.format('MMMM YYYY')}
         </div>
       </div>
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <WarningBanner warnings={warnings} />
+        </div>
+      )}
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 32 }}>
@@ -120,7 +193,7 @@ export default function AnalyticsPage() {
                   <div style={{ flex: 1, height: 4, background: '#111', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: habit.color, borderRadius: 2, transition: 'width 0.4s' }} />
                   </div>
-                  <div style={{ width: 36, textAlign: 'right', fontSize: 11, color: '#444', flexShrink: 0 }}>{pct}%</div>
+                  <div style={{ width: 36, textAlign: 'right', fontSize: 11, color: pct < 40 ? '#EF4444' : '#444', flexShrink: 0 }}>{pct}%</div>
                 </div>
               );
             })}
@@ -140,21 +213,26 @@ export default function AnalyticsPage() {
             </tr>
           </thead>
           <tbody>
-            {consistencyData.map(({ habit, done, missed, pct }) => (
-              <tr key={habit.id} style={{ borderBottom: '1px solid #0d0d0d' }}>
-                <td style={{ padding: '10px 0', fontSize: 12, color: '#888' }}>{habit.name}</td>
-                <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: '#10B981' }}>{done}</td>
-                <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: '#333' }}>{missed}</td>
-                <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: pct >= 70 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444' }}>
-                  {pct}%
-                </td>
-                <td style={{ padding: '10px 0', paddingLeft: 12, width: 80 }}>
-                  <div style={{ height: 2, background: '#111', borderRadius: 1, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: habit.color, borderRadius: 1 }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {HABITS.map(habit => {
+              const count = summary?.habitCounts[habit.id] ?? 0;
+              const missed = totalDaysThisMonth - count;
+              const pct = totalDaysThisMonth > 0 ? Math.round((count / totalDaysThisMonth) * 100) : 0;
+              return (
+                <tr key={habit.id} style={{ borderBottom: '1px solid #0d0d0d' }}>
+                  <td style={{ padding: '10px 0', fontSize: 12, color: '#888' }}>{habit.name}</td>
+                  <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: '#10B981' }}>{count}</td>
+                  <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: '#333' }}>{missed}</td>
+                  <td style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: pct >= 70 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444' }}>
+                    {pct}%
+                  </td>
+                  <td style={{ padding: '10px 0', paddingLeft: 12, width: 80 }}>
+                    <div style={{ height: 2, background: '#111', borderRadius: 1, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: habit.color, borderRadius: 1 }} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

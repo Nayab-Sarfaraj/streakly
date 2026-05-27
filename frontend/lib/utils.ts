@@ -13,9 +13,10 @@ export function getWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
 }
 
 export function getScoreColor(score: number): string {
-  if (score === 0) return "hsl(0 0% 6%)";
-  if (score < 30) return "hsl(0 0% 10%)";
-  if (score < 60) return "hsl(0 0% 16%)";
-  if (score < 80) return "hsl(0 0% 22%)";
-  return "hsl(0 0% 32%)";
+  if (score === 0) return "hsl(0 0% 6%)";          // no data — near-black
+  if (score < 25)  return "hsl(0 72% 14%)";         // very low — dark red
+  if (score < 50)  return "hsl(25 80% 18%)";        // low — dark orange
+  if (score < 75)  return "hsl(43 85% 20%)";        // moderate — dark amber
+  if (score < 90)  return "hsl(142 60% 18%)";       // good — dark green
+  return           "hsl(142 70% 26%)";              // excellent — bright green
 }

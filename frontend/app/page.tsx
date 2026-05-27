@@ -1,59 +1,99 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import dayjs from 'dayjs';
 import { Check } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, HabitLog } from '@/lib/api';
 import { HABITS, HABIT_IDS } from '@/lib/habits';
 import HabitIcon from '@/components/HabitIcon';
 import Toast, { useToast } from '@/components/Toast';
+import WarningBanner, { Warning } from '@/components/WarningBanner';
 import { cn } from '@/lib/utils';
 
+function buildWarnings(log: HabitLog | null): Warning[] {
+  const warnings: Warning[] = [];
+  if (!log) return warnings;
+
+  const hour = dayjs().hour();
+  const score = log.scorePercent;
+  const count = log.completedCount;
+
+  // Past 8 PM and under 50%
+  if (hour >= 20 && score < 50) {
+    warnings.push({
+      id: 'late-low-score',
+      level: 'critical',
+      icon: 'clock',
+      title: "Running out of day — you're below 50%",
+      description: `${count} of 9 habits done. Push through a few more before midnight.`,
+    });
+  }
+  // Past noon and nothing done
+  else if (hour >= 12 && count === 0) {
+    warnings.push({
+      id: 'midday-zero',
+      level: 'critical',
+      icon: 'x',
+      title: "Nothing logged yet today",
+      description: "It's past noon — start with any one habit to build momentum.",
+    });
+  }
+  // Evening (6 PM+) and under 50%
+  else if (hour >= 18 && score < 50) {
+    warnings.push({
+      id: 'evening-low',
+      level: 'warning',
+      icon: 'alert',
+      title: "Evening check-in — score is below 50%",
+      description: `${9 - count} habits still unchecked. You have time to turn it around.`,
+    });
+  }
+
+  return warnings;
+}
+
 export default function TodayPage() {
-  const [log, setLog] = useState<HabitLog | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   const toast = useToast();
 
-  const fetchToday = useCallback(() => {
-    api.getToday().then(setLog).finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchToday();
-    const interval = setInterval(fetchToday, 60000);
-    return () => clearInterval(interval);
-  }, [fetchToday]);
+  const { data: log, isLoading } = useQuery({
+    queryKey: ['today'],
+    queryFn: () => api.getToday(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
   const handleToggle = useCallback(async (id: string) => {
-    if (!log || saving) return;
-    const prev = log;
+    if (!log) return;
     const newHabits = { ...log.habits, [id]: !log.habits[id] };
     const completedCount = HABIT_IDS.filter(h => newHabits[h]).length;
     const scorePercent = Math.round((completedCount / 9) * 100);
 
-    setLog(l => l ? { ...l, habits: newHabits, completedCount, scorePercent } : l);
-    setSaving(true);
+    // Optimistic update
+    queryClient.setQueryData<HabitLog>(['today'], old =>
+      old ? { ...old, habits: newHabits, completedCount, scorePercent } : old
+    );
+
     try {
       const updated = await api.putToday(newHabits);
-      setLog(updated);
+      queryClient.setQueryData(['today'], updated);
       toast.show('Saved');
     } catch {
-      setLog(prev);
+      queryClient.setQueryData(['today'], log);
       toast.show('Failed to save');
-    } finally {
-      setSaving(false);
     }
-  }, [log, saving, toast]);
+  }, [log, queryClient, toast]);
 
   const completedCount = log?.completedCount ?? 0;
   const scorePercent = log?.scorePercent ?? 0;
   const today = dayjs();
+  const warnings = buildWarnings(log ?? null);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {today.format('dddd')}
         </h1>
@@ -62,9 +102,14 @@ export default function TodayPage() {
         </p>
       </div>
 
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <WarningBanner warnings={warnings} className="mb-6" />
+      )}
+
       {/* Habit list */}
       <div className="flex flex-col gap-1.5">
-        {loading
+        {isLoading
           ? Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="h-12 rounded-lg bg-card animate-pulse" />
             ))
@@ -83,12 +128,9 @@ export default function TodayPage() {
                   style={checked ? { borderColor: habit.color + '40' } : {}}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Icon */}
                     <div
                       className="flex items-center justify-center w-7 h-7 rounded-md transition-colors"
-                      style={{
-                        background: checked ? habit.color + '18' : 'hsl(0 0% 8%)',
-                      }}
+                      style={{ background: checked ? habit.color + '18' : 'hsl(0 0% 8%)' }}
                     >
                       <HabitIcon
                         name={habit.icon}
@@ -97,7 +139,6 @@ export default function TodayPage() {
                         style={{ color: checked ? habit.color : 'hsl(0 0% 35%)' }}
                       />
                     </div>
-
                     <span
                       className="text-sm transition-colors"
                       style={{ color: checked ? 'hsl(0 0% 88%)' : 'hsl(0 0% 45%)' }}
@@ -106,7 +147,6 @@ export default function TodayPage() {
                     </span>
                   </div>
 
-                  {/* Checkbox */}
                   <div
                     className="flex items-center justify-center w-5 h-5 rounded transition-all duration-150 flex-shrink-0"
                     style={{

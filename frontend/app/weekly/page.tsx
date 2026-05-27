@@ -1,35 +1,88 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import dayjs from 'dayjs';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api, HabitLog } from '@/lib/api';
 import { HABITS } from '@/lib/habits';
 import { getWeekStart } from '@/lib/utils';
 import HabitIcon from '@/components/HabitIcon';
 import WeeklyBarChart from '@/components/Charts/WeeklyBarChart';
+import WarningBanner, { Warning } from '@/components/WarningBanner';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+function buildWarnings(logs: HabitLog[], weekStart: dayjs.Dayjs, isCurrentWeek: boolean): Warning[] {
+  if (!isCurrentWeek) return [];
+  const warnings: Warning[] = [];
+  const today = dayjs();
+  const dayOfWeek = today.day() === 0 ? 6 : today.day() - 1; // 0=Mon … 6=Sun
+  const daysElapsed = dayOfWeek + 1; // how many days have passed incl. today
+
+  const logMap = logs.reduce<Record<string, HabitLog>>((acc, l) => { acc[l.date] = l; return acc; }, {});
+
+  // Total dots so far this week
+  const pastDates = Array.from({ length: daysElapsed }, (_, i) =>
+    weekStart.add(i, 'day').format('YYYY-MM-DD')
+  );
+  const totalDone = pastDates.reduce((sum, d) => sum + (logMap[d]?.completedCount ?? 0), 0);
+  const maxPossible = daysElapsed * 9;
+  const weekPacePct = maxPossible > 0 ? (totalDone / maxPossible) * 100 : 0;
+
+  // Mid-week (Wed+) with low overall pace
+  if (daysElapsed >= 3 && weekPacePct < 40) {
+    warnings.push({
+      id: 'low-week-pace',
+      level: 'warning',
+      icon: 'trend',
+      title: `Week pace is at ${Math.round(weekPacePct)}% — below target`,
+      description: `${totalDone} completions out of ${maxPossible} possible so far this week.`,
+    });
+  }
+
+  // Any habit with 0 completions by Wednesday or later
+  if (daysElapsed >= 3) {
+    const zeroHabits = HABITS.filter(habit =>
+      pastDates.every(d => !logMap[d]?.habits?.[habit.id])
+    );
+    if (zeroHabits.length > 0) {
+      warnings.push({
+        id: 'zero-habits',
+        level: zeroHabits.length >= 3 ? 'critical' : 'warning',
+        icon: 'x',
+        title: `${zeroHabits.length} habit${zeroHabits.length > 1 ? 's' : ''} not done once this week`,
+        description: zeroHabits.map(h => h.name).join(', '),
+      });
+    }
+  }
+
+  // Today not logged yet and it's past noon
+  const todayStr = today.format('YYYY-MM-DD');
+  if (today.hour() >= 12 && (logMap[todayStr]?.completedCount ?? 0) === 0) {
+    warnings.push({
+      id: 'today-empty',
+      level: 'warning',
+      icon: 'clock',
+      title: "Today hasn't been logged yet",
+      description: "Head to Today view to check off your habits.",
+    });
+  }
+
+  return warnings;
+}
+
 export default function WeeklyPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(dayjs()));
-  const [logs, setLogs] = useState<HabitLog[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchWeek = useCallback((start: dayjs.Dayjs) => {
-    setLoading(true);
-    api.getWeek(start.format('YYYY-MM-DD'))
-      .then(setLogs)
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchWeek(weekStart);
-    const interval = setInterval(() => fetchWeek(weekStart), 60000);
-    return () => clearInterval(interval);
-  }, [weekStart, fetchWeek]);
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ['week', weekStart.format('YYYY-MM-DD')],
+    queryFn: () => api.getWeek(weekStart.format('YYYY-MM-DD')),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
   const weekEnd = weekStart.add(6, 'day');
   const today = dayjs().format('YYYY-MM-DD');
@@ -41,6 +94,7 @@ export default function WeeklyPage() {
   }, {});
 
   const dates = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day'));
+  const warnings = buildWarnings(logs, weekStart, isCurrentWeek);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
@@ -74,7 +128,12 @@ export default function WeeklyPage() {
         </div>
       </div>
 
-      {loading ? (
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <WarningBanner warnings={warnings} className="mb-6" />
+      )}
+
+      {isLoading ? (
         <div className="space-y-1.5">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="h-10 rounded-lg bg-card animate-pulse" />
@@ -88,13 +147,11 @@ export default function WeeklyPage() {
 
               <thead>
                 <tr className="border-b border-border bg-card/60">
-                  {/* Habit column — icon-only on mobile, icon+name on desktop */}
                   <th className="py-3 text-left text-xs font-medium text-muted-foreground"
                       style={{ width: 44, paddingLeft: 10 }}>
                     <span className="hidden sm:inline">Habit</span>
                   </th>
 
-                  {/* Day columns */}
                   {dates.map((d, i) => {
                     const dateStr = d.format('YYYY-MM-DD');
                     const isToday = dateStr === today;
@@ -117,7 +174,6 @@ export default function WeeklyPage() {
                     );
                   })}
 
-                  {/* Total column */}
                   <th className="py-3 text-center text-[10px] font-medium text-muted-foreground" style={{ width: 28 }}>
                     /7
                   </th>
@@ -136,7 +192,6 @@ export default function WeeklyPage() {
                       key={habit.id}
                       className="border-b border-border/40 last:border-0 transition-colors hover:bg-accent/10"
                     >
-                      {/* Habit label: icon only on mobile, icon+name on sm+ */}
                       <td className="py-2.5" style={{ paddingLeft: 8, paddingRight: 4 }}>
                         <div className="flex items-center gap-2">
                           <div
@@ -156,7 +211,6 @@ export default function WeeklyPage() {
                         </div>
                       </td>
 
-                      {/* Day cells */}
                       {dates.map((d, di) => {
                         const dateStr = d.format('YYYY-MM-DD');
                         const isFuture = dateStr > today;
@@ -187,7 +241,6 @@ export default function WeeklyPage() {
                         );
                       })}
 
-                      {/* Weekly total */}
                       <td className="py-2.5 text-center">
                         <span
                           className="text-[11px] font-medium tabular-nums"
@@ -201,7 +254,6 @@ export default function WeeklyPage() {
                 })}
               </tbody>
 
-              {/* Footer: daily totals */}
               <tfoot>
                 <tr className="border-t border-border bg-card/40">
                   <td className="py-2 text-[10px] text-muted-foreground/40" style={{ paddingLeft: 10 }}>

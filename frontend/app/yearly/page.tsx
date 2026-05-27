@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import dayjs from 'dayjs';
-import { api, YearMonth } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { HABITS } from '@/lib/habits';
 import YearlyLineChart from '@/components/Charts/YearlyLineChart';
 
@@ -11,19 +12,13 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 export default function YearlyPage() {
   const now = dayjs();
   const [year, setYear] = useState(now.year());
-  const [data, setData] = useState<YearMonth[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchYear = useCallback((y: number) => {
-    setLoading(true);
-    api.getYear(y).then(setData).finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchYear(year);
-    const interval = setInterval(() => fetchYear(year), 60000);
-    return () => clearInterval(interval);
-  }, [year, fetchYear]);
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['year', year],
+    queryFn: () => api.getYear(year),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
   const isCurrentYear = year === now.year();
   const hasData = data.some(d => d.completedTotal > 0);
@@ -61,7 +56,7 @@ export default function YearlyPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div style={{ height: 200, background: '#0d0d0d', borderRadius: 6 }} />
       ) : !hasData ? (
         <div style={{ textAlign: 'center', padding: '64px 0', color: '#333', fontSize: 13 }}>
@@ -99,7 +94,7 @@ export default function YearlyPage() {
                         return (
                           <td key={m} style={{ padding: '6px 2px', textAlign: 'center' }}>
                             <div
-                              title={`${habit.name} — ${m}: ~${count} days`}
+                              title={`${habit.name} — ${m}: ${count} days`}
                               style={{
                                 width: 20,
                                 height: 20,
