@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api, HabitLog } from '@/lib/api';
 import { HABITS } from '@/lib/habits';
-import { getScoreColor, getWeekStart } from '@/lib/utils';
+import { getScoreColor } from '@/lib/utils';
 import HabitIcon from '@/components/HabitIcon';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
