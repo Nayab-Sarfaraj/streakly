@@ -3,17 +3,15 @@ const router = express.Router();
 const dayjs = require('dayjs');
 const HabitLog = require('../models/HabitLog');
 
-const HABIT_IDS = ['gym','reading','company','learning','sideproject','pixlreel','kastreel','post','jobhunt'];
+const HABIT_IDS = ['gym', 'reading', 'company', 'learning', 'sideproject', 'post', 'jobhunt'];
 const HABIT_NAMES = {
-  gym:         '🏋️ Gym / Workout',
-  reading:     '📚 Book Reading',
-  company:     '💼 Company Work',
-  learning:    '🧠 Learning / Courses',
+  gym: '🏋️ Gym / Workout',
+  reading: '📚 Book Reading',
+  company: '💼 Company Work',
+  learning: '🧠 Learning / Courses',
   sideproject: '🚀 Side Projects',
-  pixlreel:    '🎬 Pixl AI Reel',
-  kastreel:    '🎬 Kast Reel',
-  post:        '📣 Post on X / LinkedIn',
-  jobhunt:     '💼 Job Hunt',
+  post: '📣 Post on X / LinkedIn',
+  jobhunt: '💼 Job Hunt',
 };
 const USER_ID = 'default';
 

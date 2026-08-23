@@ -3,7 +3,7 @@ const router = express.Router();
 const dayjs = require('dayjs');
 const HabitLog = require('../models/HabitLog');
 
-const HABIT_IDS = ['gym','reading','company','learning','sideproject','pixlreel','kastreel','post','jobhunt'];
+const HABIT_IDS = ['gym', 'reading', 'company', 'learning', 'sideproject', 'post', 'jobhunt'];
 const USER_ID = 'default';
 
 function computeStats(habits) {
@@ -109,7 +109,7 @@ router.get('/month', async (req, res) => {
 router.get('/year', async (req, res) => {
   try {
     const { year } = req.query;
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     const results = await Promise.all(
       Array.from({ length: 12 }, async (_, i) => {
