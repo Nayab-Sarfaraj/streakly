@@ -11,8 +11,6 @@ export const HABITS: Habit[] = [
   { id: 'company',     name: 'Company',      icon: 'Briefcase',   color: '#F59E0B' },
   { id: 'learning',    name: 'Learning',     icon: 'GraduationCap', color: '#8B5CF6' },
   { id: 'sideproject', name: 'Side Project', icon: 'Rocket',      color: '#EC4899' },
-  { id: 'pixlreel',    name: 'Pixl Reel',    icon: 'Clapperboard',color: '#06B6D4' },
-  { id: 'kastreel',    name: 'Kast Reel',    icon: 'Video',       color: '#F97316' },
   { id: 'post',        name: 'Post',         icon: 'Send',        color: '#EF4444' },
   { id: 'jobhunt',     name: 'Job Hunt',     icon: 'Search',      color: '#84CC16' },
 ];
