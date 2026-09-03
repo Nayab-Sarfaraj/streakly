@@ -21,7 +21,7 @@ A full-stack daily habit tracker. Log 9 habits, track streaks, and visualize you
 ```bash
 cd backend
 npm install
-npm run dev       # uses nodemon
+npm run dev     
 # or
 node server.js
 ```
